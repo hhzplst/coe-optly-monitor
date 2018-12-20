@@ -1,7 +1,7 @@
 import express from 'express';
 import logger from 'morgan';
 import mongoose from 'mongoose';
-import { getItemsFromType } from './optimizely';
+import getItemsFromType from './optimizely';
 import Project from './models/project';
 import Campaign from './models/campaign';
 import Experiment from './models/experiment';
@@ -27,16 +27,15 @@ db.on('connected', () => {
     .then(() => updateProjectCollection())
     .then(() => {
       console.log('project ids are available to use');
-      updateCampaignCollection();
-      updateExperimentCollection();
-      updatePageCollection();
-    });
+      return Promise.all([
+        updateCampaignCollection(),
+        updateExperimentCollection(),
+        updatePageCollection(),
+      ]);
+    })
+    .then(() => console.log('db update completed!'));
 });
 db.on('error', console.error.bind(console, 'MongoDB connection error: '));
-
-const handleError = (method, err) => {
-  console.log(`in ${method}, error: ${err}`);
-};
 
 const init = () => {
   console.log('Clearing all models');
@@ -46,94 +45,75 @@ const init = () => {
 
 // update collections
 const updateProjectCollection = () => getItemsFromType('project')
-  .then((data) => {
-    Project.insertMany(data.map((e) => {
-      projectIds.push(e.id);
-      return {
-        id: e.id,
-        name: e.name,
-        status: e.status,
-        created: e.created,
-        last_modified: e.last_modified,
-      };
-    }), (err) => {
-      if (err) handleError('insertMany -> updateProjectCollection', err);
-    });
-  })
+  .then(data => Project.insertMany(data.map((e) => {
+    projectIds.push(e.id);
+    return {
+      id: e.id,
+      name: e.name,
+      status: e.status,
+      created: e.created,
+      last_modified: e.last_modified,
+    };
+  })))
   .then(() => {
     console.log('project collection update completed');
-    return Promise.resolve(projectIds);
+    return projectIds;
   })
   .catch(err => console.log(err));
 
-const updateCampaignCollection = () => {
-  Promise.all(projectIds.map(prjId => getItemsFromType('campaign', prjId)
-    .then(data => Campaign.insertMany(data.map(e => ({
-      id: e.id,
-      project_id: e.project_id,
-      name: e.name,
-      page_ids: e.page_ids,
-      status: e.status,
-      created: e.created,
-      last_modified: e.last_modified,
-    }))))
-    .then((docs) => {
-      // insert into KnownPage collection
-      docs.map((doc) => {
-        if (doc.page_ids) {
-          return Promise.all((doc.page_ids).map(pageId => new KnownPage({ id: pageId }).save()));
-        // eslint-disable-next-line no-else-return
-        } else {
-          return new KnownPage({ id: -1 }).save();
-        }
-      });
-    })
-    .catch(err => console.log(err))))
-    .then(() => { console.log('campaign collection update completed'); })
-    .catch(err => console.log(err));
-};
+const updateCampaignCollection = () => Promise.all(projectIds.map(prjId => getItemsFromType('campaign', prjId)
+  .then(data => Campaign.insertMany(data.map(e => ({
+    id: e.id,
+    project_id: e.project_id,
+    name: e.name,
+    page_ids: e.page_ids,
+    status: e.status,
+    created: e.created,
+    last_modified: e.last_modified,
+  }))))
+  .then((docs) => {
+    for (let i = 0; i < docs.length; i++) {
+      if (docs[i].page_ids) {
+        return Promise.all((docs[i].page_ids).map(pageId => new KnownPage({ id: pageId }).save()));
+      }
+      return new KnownPage({ id: -1 }).save();
+    }
+  })
+  .catch(err => console.log(err))))
+  .then(() => { console.log('campaign collection update completed'); });
 
-const updateExperimentCollection = () => {
-  Promise.all(projectIds.map(prjId => getItemsFromType('experiment', prjId)
-    .then(data => Experiment.insertMany(data.map(e => ({
-      id: e.id,
-      project_id: e.project_id,
-      name: e.name,
-      // eslint-disable-next-line no-tabs
-      page_ids: e.page_ids,
-      status: e.status,
-      created: e.created,
-      last_modified: e.last_modified,
-    }))))
-    .then((docs) => {
-      // insert into KnownPage collection
-      docs.map((doc) => {
-        if (doc.page_ids) {
-          return Promise.all((doc.page_ids).map(pageId => new KnownPage({ id: pageId }).save()));
-        // eslint-disable-next-line no-else-return
-        } else {
-          return new KnownPage({ id: -1 }).save();
-        }
-      });
-    })
-    .catch(err => console.log(err))))
-    .then(() => { console.log('experiment collection update completed'); })
-    .catch(err => console.log(err));
-};
+const updateExperimentCollection = () => Promise.all(projectIds.map(prjId => getItemsFromType('experiment', prjId)
+  .then(data => Experiment.insertMany(data.map(e => ({
+    id: e.id,
+    project_id: e.project_id,
+    name: e.name,
+    page_ids: e.page_ids,
+    status: e.status,
+    created: e.created,
+    last_modified: e.last_modified,
+  }))))
+  .then((docs) => {
+    for (let i = 0; i < docs.length; i++) {
+      if (docs[i].page_ids) {
+        return Promise.all((docs[i].page_ids).map(pageId => new KnownPage({ id: pageId }).save()));
+      }
+      return new KnownPage({ id: -1 }).save();
+    }
+  })
+  .catch(err => console.log(err))))
+  .then(() => { console.log('experiment collection update completed'); });
 
-const updatePageCollection = () => {
-  Promise.all(projectIds.map(prjId => getItemsFromType('page', prjId)
-    .then(data => Page.insertMany(data.map(e => ({
-      id: e.id,
-      project_id: e.project_id,
-      name: e.name,
-      archived: e.archived,
-      created: e.created,
-      last_modified: e.last_modified,
-    }))))))
-    .then(() => { console.log('page collection update completed'); })
-    .catch(err => console.log(err));
-};
+const updatePageCollection = () => Promise.all(projectIds.map(prjId => getItemsFromType('page', prjId)
+  .then(data => Page.insertMany(data.map(e => ({
+    id: e.id,
+    project_id: e.project_id,
+    name: e.name,
+    archived: e.archived,
+    created: e.created,
+    last_modified: e.last_modified,
+  }))))))
+  .then(() => { console.log('page collection update completed'); })
+  .catch(err => console.log(err));
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome!' });
