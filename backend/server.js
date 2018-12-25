@@ -33,7 +33,7 @@ db.on('connected', () => {
         updatePageCollection(),
       ]);
     })
-    .then(() => console.log('db update completed!'));
+    .then(() => console.log('done'));
 });
 db.on('error', console.error.bind(console, 'MongoDB connection error: '));
 

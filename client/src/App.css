@@ -1,3 +1,24 @@
+.Loader {
+  position: relative;
+  height: 100vh;
+}
+.Loader::after {
+  background-color: rgba(0,0,0,.7);
+  background-size: cover;
+  content: 'Updating database...this could take a few minutes';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+.App {
+  height: 100vh;
+}
 .App-logo {
   background: yellow;
   width: 100%;
