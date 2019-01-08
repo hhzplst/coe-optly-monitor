@@ -22,19 +22,19 @@ app.use('/api', router);
 mongoose.connect(process.env.DB_URI, { useNewUrlParser: true });
 mongoose.Promise = global.Promise;
 const db = mongoose.connection;
-db.on('connected', () => {
-  init()
-    .then(() => updateProjectCollection())
-    .then(() => {
-      console.log('project ids are available to use');
-      return Promise.all([
-        updateCampaignCollection(),
-        updateExperimentCollection(),
-        updatePageCollection(),
-      ]);
-    })
-    .then(() => console.log('done'));
-});
+// db.on('connected', () => {
+//   init()
+//     .then(() => updateProjectCollection())
+//     .then(() => {
+//       console.log('project ids are available to use');
+//       return Promise.all([
+//         updateCampaignCollection(),
+//         updateExperimentCollection(),
+//         updatePageCollection(),
+//       ]);
+//     })
+//     .then(() => console.log('done'));
+// });
 db.on('error', console.error.bind(console, 'MongoDB connection error: '));
 
 const init = () => {
@@ -114,6 +114,21 @@ const updatePageCollection = () => Promise.all(projectIds.map(prjId => getItemsF
   }))))))
   .then(() => { console.log('page collection update completed'); })
   .catch(err => console.log(err));
+
+const getModelCount = (model, str) => model.countDocuments({})
+  .then(res => ({
+    [str]: res,
+  }))
+  .catch(err => console.log(err));
+
+router.get('/getModelCount', (req, res) => {
+  Promise.all([getModelCount(Project, 'project'), getModelCount(Campaign, 'campaign'), getModelCount(Experiment, 'experiment'), getModelCount(KnownPage, 'knownpage'), getModelCount(Page, 'page')])
+    .then((results) => {
+      res.send({
+        count: results,
+      });
+    });
+});
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome!' });
