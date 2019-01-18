@@ -1,8 +1,9 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+
 const Schema = mongoose.Schema;
 
 const KnownPageSchema = new Schema({
-    id: Number
-}, {timestamps: true});
+  id: Number,
+}, { timestamps: true });
 
-export default mongoose.model("KnownPage", KnownPageSchema);
+export default mongoose.model('KnownPage', KnownPageSchema);

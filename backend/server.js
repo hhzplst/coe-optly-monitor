@@ -7,6 +7,11 @@ import Campaign from './models/campaign';
 import Experiment from './models/experiment';
 import KnownPage from './models/knownPage';
 import Page from './models/page';
+import ProjectHistory from './models/projectHistory';
+import CampaignHistory from './models/campaignHistory';
+import ExperimentHistory from './models/experimentHistory';
+import KnownPageHistory from './models/knownPageHistory';
+import PageHistory from './models/pageHistory';
 
 require('dotenv').config();
 
@@ -33,8 +38,11 @@ const db = mongoose.connection;
 //         updatePageCollection(),
 //       ]);
 //     })
-//     .then(() => console.log('done'));
+//     .then(() => Promise.all(addToHistoryModels()))
+//     .then(() => console.log('done'))
+//     .catch(err => console.log(err));
 // });
+
 db.on('error', console.error.bind(console, 'MongoDB connection error: '));
 
 const init = () => {
@@ -115,6 +123,59 @@ const updatePageCollection = () => Promise.all(projectIds.map(prjId => getItemsF
   .then(() => { console.log('page collection update completed'); })
   .catch(err => console.log(err));
 
+const addToHistoryModels = () => {
+  const p1 = Project.countDocuments({})
+    .then((res) => {
+      ProjectHistory.create({
+        time: new Date(),
+        number: res,
+      }, (err) => {
+        if (err) console.log(err);
+      });
+    });
+
+  const p2 = Campaign.countDocuments({})
+    .then((res) => {
+      CampaignHistory.create({
+        time: new Date(),
+        number: res,
+      }, (err) => {
+        if (err) console.log(err);
+      });
+    });
+
+  const p3 = Experiment.countDocuments({})
+    .then((res) => {
+      ExperimentHistory.create({
+        time: new Date(),
+        number: res,
+      }, (err) => {
+        if (err) console.log(err);
+      });
+    });
+
+  const p4 = KnownPage.countDocuments({})
+    .then((res) => {
+      KnownPageHistory.create({
+        time: new Date(),
+        number: res,
+      }, (err) => {
+        if (err) console.log(err);
+      });
+    });
+
+  const p5 = Page.countDocuments({})
+    .then((res) => {
+      PageHistory.create({
+        time: new Date(),
+        number: res,
+      }, (err) => {
+        if (err) console.log(err);
+      });
+    });
+  return [p1, p2, p3, p4, p5];
+};
+
 const getModelCount = (model, str) => model.countDocuments({})
   .then(res => ({
     [str]: res,
@@ -128,6 +189,30 @@ router.get('/getModelCount', (req, res) => {
         count: results,
       });
     });
+});
+
+router.get('/history/:target', (req, res) => {
+  const results = {
+    date: [],
+    data: [],
+  };
+  const stringModelMapping = {
+    campaign: CampaignHistory,
+    project: ProjectHistory,
+    experiment: ExperimentHistory,
+    knownPage: KnownPageHistory,
+    page: PageHistory,
+  };
+  stringModelMapping[req.params.target].find({ createdAt: { $gt: req.query.start, $lt: req.query.end } }, (err, docs) => {
+    if (!err) {
+      docs.forEach((doc) => {
+        let temp = `${doc.time.getMonth() + 1}/${doc.time.getDate()}/${doc.time.getFullYear()}`;
+        results.date.push(temp);
+        results.data.push(doc.number);
+      });
+      res.send(results);
+    }
+  });
 });
 
 router.get('/', (req, res) => {

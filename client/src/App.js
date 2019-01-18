@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
-import ProjectChart from './charts/ProjectChart';
+import HistoryChart from './charts/HistoryChart';
 
 class App extends React.Component {
   render() {
@@ -11,7 +11,7 @@ class App extends React.Component {
           <img src={logo} className="App-logo" alt="logo" />
         </header>
         <div>
-          <ProjectChart />
+          <HistoryChart />
         </div>
       </div>
     );
